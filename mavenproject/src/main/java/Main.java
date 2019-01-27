@@ -5,23 +5,36 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList; //"tt1285016"
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-// next step: try to get response body by giving params for movies:
-// director, actor(s), IMDB rating, genre, year, title
+
 public class Main {
-    // class that gets omdb info
-    // parses cineplex with BeautifulSoup
-    // uses Twilio to send text to me
-
     public static final String API_KEY = "484f4e63198cc39f9e9c72d002f9269d";
+
+    // API Callout base urls
     public static final String TMDB_DISCOVER_URL = "https://api.themoviedb.org/3/discover/movie?api_key="+ API_KEY + "&";
     public static final String TMDB_SEARCH_ACTOR_URL = "http://api.tmdb.org/3/search/person?api_key=" + API_KEY + "&query=";
     public static final String TMDB_SEARCH_GENRE_URL = "http://api.tmdb.org/3/genre/movie/list?api_key=" + API_KEY;
 
+    // Parameters for urls
+    public static final String WITH_CAST = "with_cast";
+    public static final String WITH_GENRES = "with_genres";
+    public static final String VOTE_AVERAGE = "vote_average.gte";
+    public static final String YEAR = "year";
+
+    /**
+     * Main method
+     * Goal:
+     * 1) get user input for list of actors, list of genres, imdb rating, and year of movie
+     * 2) Connect with TMDB API to return response to user's input
+     * 3) ---- MAYBE Use Beautiful Soup to parse Cinplex website for possible showtimes
+     * 4) ---- MAYBE Send user text message of showtimes (if any)
+     * 5) Send user text message of response to user's initial input using Twilio API
+     *
+     * @param args
+     */
     public static void main(String[] args) {
         try {
             // these params will actually come from the params to main
@@ -32,21 +45,31 @@ public class Main {
             Number imdbRating;
             Integer year;
 
-            actorList.add("Ryan Reynolds");
+            // mock data
+            actorList.add("Tom Hanks");
+            actorList.add("Robin Wright");
 
-            genreList.add("Action");
+            //genreList.add("Action");
 
-            imdbRating = 7.5;
+            imdbRating = null;
             year = null;
 
-            linkOMDBWithUnirest(actorList, genreList, imdbRating, year);
+            linkTMDBWithUnirest(actorList, genreList, imdbRating, year);
         } catch (UnirestException e) {
             e.printStackTrace();
             System.out.println("RAVINA: UNIREST EXCEPTION THROWN :(");
         }
     }
 
-    public static void linkOMDBWithUnirest(List<String> actorList, List<String> genreList, Number imdbRating, Integer year) throws UnirestException {
+    /**
+     * Method to connect to API
+     * @param actorList List<String> actors to send to API
+     * @param genreList List<String> genres to send to API
+     * @param imdbRating Number  imdb rating to send to API
+     * @param year Integer  year of movie to send to API
+     * @throws UnirestException
+     */
+    public static void linkTMDBWithUnirest(List<String> actorList, List<String> genreList, Number imdbRating, Integer year) throws UnirestException {
 
         String csActors = getActorIds(actorList);
         String csGenres = getGenreIds(genreList);
@@ -64,6 +87,12 @@ public class Main {
 
     }
 
+    /**
+     * Method to make API Callout with Unirest given url
+     * @param url url to make API callout with
+     * @return HttpResponse<JsonNode> response of API callout
+     * @throws UnirestException
+     */
     private static HttpResponse<JsonNode> makeApiCallout(String url) throws UnirestException {
         HttpResponse<JsonNode> body = Unirest.get(url)
                 .header("accept", "application/json")
@@ -72,33 +101,50 @@ public class Main {
         return body;
     }
 
-    // TODO: create final vars for param names
+    /**
+     * Method to the parameters of the url
+     * @param csActors Comma-separated String of actor ids to put in WITH_CAST param
+     * @param csGenres Comma-separated String of genre ids to put in WITH _GENRES param
+     * @param imdbRating Number  rating to put into VOTE_AVERAGE param
+     * @param year Integer  year to put into YEAR param
+     *
+     * @return String substring of params that will eventually be appended to a base url
+     */
     private static String formUrlParams(String csActors, String csGenres, Number imdbRating, Integer year) {
         String parametersForUrl = "";
         if(csActors != null && csActors.length() > 0) {
-            parametersForUrl += "with_cast=" + csActors;
+            parametersForUrl += WITH_CAST + "=" + csActors;
         }
 
         if(csGenres != null && csGenres.length() > 0) {
             if(parametersForUrl.length() != 0) parametersForUrl+= "&";
-            parametersForUrl += "with_genres=" + csGenres;
+            parametersForUrl += WITH_GENRES + "=" + csGenres;
         }
 
         if(imdbRating != null) {
             if(parametersForUrl.length() != 0) parametersForUrl+= "&";
-            parametersForUrl += "vote_average.gte=" + imdbRating;
+            parametersForUrl += VOTE_AVERAGE + "=" + imdbRating;
         }
 
         if(year != null) {
             if(parametersForUrl.length() != 0) parametersForUrl+= "&";
-            parametersForUrl += "year=" + year;
+            parametersForUrl += YEAR + "=" + year;
         }
 
         System.out.println("RAVINA: parametersForUrl = " + parametersForUrl);
         return parametersForUrl;
     }
 
-    // TODO: make api calls to get genre ids and put them in a comma separated string
+
+    /**
+     * Method to get all the genre ids in genreList
+     *
+     * @param genreList List<String> genres whose ids should be obtained
+     *
+     * @return String comma-separated string of genre ids
+     *
+     * @throws UnirestException
+     */
     private static String getGenreIds(List<String> genreList) throws UnirestException {
         String csGenres = "";
 
@@ -127,7 +173,15 @@ public class Main {
         return csGenres;
     }
 
-    // TODO: make api calls to get actor ids and put them in a comma separated string
+    /**
+     * Method to get all the actors ids in actorList
+     *
+     * @param actorList List<String> actors whose ids should be obtained
+     *
+     * @return String comma-separated String of actor ids
+     *
+     * @throws UnirestException
+     */
     private static String getActorIds(List<String> actorList) throws UnirestException {
         String csActors = "";
 
