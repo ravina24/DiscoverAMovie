@@ -1,12 +1,12 @@
 import java.util.List;
 
 public class Movie {
-    public static String title;
-    public static List<String> genreList;
-    public static List<String> actorList;
-    public static Number rating;
-    public static String overview;
-    public static String releaseDate;
+    public String title;
+    public List<String> genreList;
+    public List<String> actorList;
+    public Number rating;
+    public String overview;
+    public String releaseDate;
 
     public Movie(String title, List<String> genreList, List<String> actorList, Number rating, String overview, String releaseDate) {
         this.title = title;

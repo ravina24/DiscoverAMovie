@@ -2,6 +2,7 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import com.sun.scenario.effect.impl.sw.sse.SSEBlend_SRC_OUTPeer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -50,18 +51,64 @@ public class Main {
             Integer year;
 
             // mock data
-            actorList.add("Terry Crews");
+            actorList.add("Kevin Hart");
+            actorList.add("Dwayne Johnson");
+            //actorList.add("Rebel Wilson");
 
-            genreList.add("Action");
+            //genreList.add("Action");
 
-            imdbRating = 7;
-            year = 2018;
+            imdbRating = null;
+            year = null;
 
-            linkTMDBWithUnirest(actorList, genreList, imdbRating, year);
+            List<Movie> movieList = linkTMDBWithUnirest(actorList, genreList, imdbRating, year);
+
+            sendText(movieList);
+
         } catch (UnirestException e) {
             e.printStackTrace();
             System.out.println("RAVINA: UNIREST EXCEPTION THROWN :(");
         }
+    }
+
+    private static void sendText(List<Movie> movieList) {
+        String text = "Hello! Your recent movie discovery with actor(s) ";
+
+        String csActors = "";
+        for(String actor : movieList.get(0).actorList) {
+            if(csActors.length() > 0) csActors += ", ";
+            csActors += actor;
+        }
+
+        text += csActors + " has produced the following results: \n \n";
+
+
+        for(Movie movie : movieList) {
+            text += "TITLE: " + movie.title + "\n";
+            text += "OVERVIEW: " + movie.overview + "\n";
+
+            String csGenres = "";
+            for(String genre : movie.genreList) {
+                if(csGenres.length() > 0) csGenres += ", ";
+                csGenres += genre;
+            }
+
+            text += "GENRES(S): " + csGenres + "\n";
+            text += "RATING: " + movie.rating + "\n";
+            text += "RELEASE DATE: " + movie.releaseDate + "\n";
+
+            text += "\n \n";
+        }
+
+        // in case text is > 1600 characters, send multiple messages
+        System.out.println("RAVINA: text.length() = " + text.length());
+        if(text.length() < 1500) SmsSender.sendSMS("+17788962742", text);
+        else {
+            SmsSender.sendSMS("+17788962742", text.substring(0, 1500));
+        }
+
+
+        System.out.println("Ravina: text = " + text);
+
     }
 
     /**
@@ -70,9 +117,11 @@ public class Main {
      * @param genreList List<String> genres to send to API
      * @param imdbRating Number  imdb rating to send to API
      * @param year Integer  year of movie to send to API
+     *
+     * @returns List<Movie> list of extracted movies
      * @throws UnirestException
      */
-    public static void linkTMDBWithUnirest(List<String> actorList, List<String> genreList, Number imdbRating, Integer year) throws UnirestException {
+    public static List<Movie> linkTMDBWithUnirest(List<String> actorList, List<String> genreList, Number imdbRating, Integer year) throws UnirestException {
 
         String csActors = getActorIds(actorList);
         String csGenres = getGenreIds(genreList);
@@ -91,6 +140,11 @@ public class Main {
         // extract movies out of response
         List<Movie> movieList = extractMovies(responseBody, actorList);
         System.out.println("Ravina: movieList = " + movieList);
+//        for(Movie movie : movieList) {
+//            System.out.println("RAVINA: movie title = " + movie.title);
+//        }
+
+        return movieList;
 
 
 
@@ -99,7 +153,7 @@ public class Main {
     /**
      * Method to parse TMDB response into a list of movies with its details
      * @param responseBody TMDB response to parse
-     * @param actorList list of actors user wants included in the movies
+     * @param actorList list of actors that the user wants included in the movies
      * @return List<Movie>  list of movies parsed from responseBody
      */
     private static List<Movie> extractMovies(JsonNode responseBody, List<String> actorList) {
@@ -128,6 +182,11 @@ public class Main {
             System.out.println("RAVINA: movie = " + movie.title + " " + movie.genreList + " " + movie.actorList + " " + movie.rating + " " + movie.overview + " " + movie.releaseDate);
             movieList.add(movie);
         }
+
+        for(Movie movie : movieList) {
+            System.out.println("RAVINA: movie title = " + movie.title);
+        }
+
 
         return movieList;
     }
