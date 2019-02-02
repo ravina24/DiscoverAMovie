@@ -24,6 +24,10 @@ public class Main {
     public static final String VOTE_AVERAGE = "vote_average.gte";
     public static final String YEAR = "year";
 
+    // Mapping of actors and genres with ids
+    private static HashMap<Integer, String> IdGenreMap = new HashMap<Integer, String>();
+    private static HashMap<Integer, String> IdActorMap = new HashMap<Integer, String>();
+
     /**
      * Main method
      * Goal:
@@ -38,21 +42,20 @@ public class Main {
     public static void main(String[] args) {
         try {
             // these params will actually come from the params to main
-            //ArrayList<String> directorList = new ArrayList<String>();
-            ArrayList<String> actorList = new ArrayList<String>();
-            ArrayList<String> genreList = new ArrayList<String>();
+            populateIdGenreMap();
+            List<String> actorList = new ArrayList<String>();
+            List<String> genreList = new ArrayList<String>();
 
             Number imdbRating;
             Integer year;
 
             // mock data
-            actorList.add("Tom Hanks");
-            actorList.add("Robin Wright");
+            actorList.add("Terry Crews");
 
-            //genreList.add("Action");
+            genreList.add("Action");
 
-            imdbRating = null;
-            year = null;
+            imdbRating = 7;
+            year = 2018;
 
             linkTMDBWithUnirest(actorList, genreList, imdbRating, year);
         } catch (UnirestException e) {
@@ -85,6 +88,42 @@ public class Main {
         System.out.println("ravina: statusCode = " + statusCode);
         System.out.println("ravina: responseBody = " + responseBody);
 
+        // extract movies out of response
+        List<Movie> movieList = extractMovies(responseBody, actorList);
+        System.out.println("Ravina: movieList = " + movieList);
+
+
+
+    }
+
+    private static List<Movie> extractMovies(JsonNode responseBody, List<String> actorList) {
+        List<Movie> movieList = new ArrayList<Movie>();
+
+        JSONObject responseObject = responseBody.getObject();
+        JSONArray results = responseObject.getJSONArray("results");
+
+        for(int i = 0; i < results.length(); i++) {
+            JSONObject movieObject = results.getJSONObject(i);
+            String title = movieObject.getString("title");
+
+            // get genre list
+            JSONArray genreIdArray = movieObject.getJSONArray("genre_ids");
+            List<String> genreList = new ArrayList<String>();
+            for(int j = 0; j < genreIdArray.length(); j++) {
+                Integer genreId = genreIdArray.getInt(j);
+                if(IdGenreMap.get(genreId) != null) genreList.add(IdGenreMap.get(genreId));
+            }
+
+            Number rating = (Number) movieObject.get("vote_average");
+            String overview = movieObject.getString("overview");
+            String releaseDate = movieObject.getString("release_date");
+
+            Movie movie = new Movie(title, genreList, actorList, rating, overview, releaseDate);
+            System.out.println("RAVINA: movie = " + movie.title + " " + movie.genreList + " " + movie.actorList + " " + movie.rating + " " + movie.overview + " " + movie.releaseDate);
+            movieList.add(movie);
+        }
+
+        return movieList;
     }
 
     /**
@@ -208,6 +247,8 @@ public class Main {
                     if(id != null) {
                         if(csActors.length() > 0) csActors += ",";
                         csActors += id;
+
+                        IdActorMap.put(id, actor);
                     }
                 }
             }
@@ -216,4 +257,26 @@ public class Main {
         System.out.println("RAVINA: csActors = " + csActors);
         return csActors;
     }
+
+    /**
+     * Method to get all genres available on IMDB and map Id to Genre name
+     * @throws UnirestException
+     */
+    private static void populateIdGenreMap() throws UnirestException {
+
+        HttpResponse<JsonNode> body = makeApiCallout(TMDB_SEARCH_GENRE_URL);
+        JsonNode responseBody = body.getBody();
+        JSONObject jsonObject = responseBody.getObject();
+
+        JSONArray genreArray = jsonObject.getJSONArray("genres");
+
+        for(int i = 0; i < genreArray.length(); i++)
+        {
+            JSONObject object = genreArray.getJSONObject(i);
+            IdGenreMap.put((Integer) object.get("id"), (String) object.get("name"));
+        }
+
+        System.out.println("RAVINA: IdGenreMap = " + IdGenreMap);
+    }
+
 }
