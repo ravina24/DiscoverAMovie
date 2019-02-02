@@ -96,6 +96,12 @@ public class Main {
 
     }
 
+    /**
+     * Method to parse TMDB response into a list of movies with its details
+     * @param responseBody TMDB response to parse
+     * @param actorList list of actors user wants included in the movies
+     * @return List<Movie>  list of movies parsed from responseBody
+     */
     private static List<Movie> extractMovies(JsonNode responseBody, List<String> actorList) {
         List<Movie> movieList = new ArrayList<Movie>();
 
