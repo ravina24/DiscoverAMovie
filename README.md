@@ -1,1 +1,1 @@
-# MovieShowtimeAlerter
+# DiscoverAMovie
